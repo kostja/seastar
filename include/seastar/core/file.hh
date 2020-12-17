@@ -120,6 +120,11 @@ public:
     unsigned _memory_dma_alignment = 4096;
     unsigned _disk_read_dma_alignment = 4096;
     unsigned _disk_write_dma_alignment = 4096;
+    // Alignment for write offsets when using direct I/O.
+    // This is the same as disk_write_dma_alignemnt, but more
+    // accurate, so should be preferred to _disk_write_dma_alignment
+    // in cases when larger alignment may lead to high writeamp.
+    unsigned _direct_io_alignment = 512;
 public:
     virtual ~file_impl() {}
 
@@ -213,6 +218,12 @@ public:
     uint64_t disk_write_dma_alignment() const {
         return _file_impl->_disk_write_dma_alignment;
     }
+
+    /// Alignment requirement for O_DIRECT writes
+    uint64_t direct_io_alignment() const {
+        return _file_impl->_direct_io_alignment;
+    }
+
 
     /// Alignment requirement for data buffers
     uint64_t memory_dma_alignment() const {
