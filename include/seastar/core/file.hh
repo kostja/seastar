@@ -121,6 +121,11 @@ public:
     unsigned _memory_dma_alignment = 4096;
     unsigned _disk_read_dma_alignment = 4096;
     unsigned _disk_write_dma_alignment = 4096;
+    // Alignment for write offsets when using direct I/O.
+    // This is the same as disk_write_dma_alignemnt, but more
+    // accurate, so should be preferred to it in cases when larger
+    // alignment may lead to high writeamp.
+    unsigned _direct_io_alignment = 512;
 public:
     virtual ~file_impl() {}
 
@@ -215,6 +220,11 @@ public:
         return _file_impl->_disk_write_dma_alignment;
     }
 
+    /// Alignment requirement for O_DIRECT writes
+    uint64_t direct_io_alignment() const noexcept {
+        return _file_impl->_direct_io_alignment;
+    }
+
     /// Alignment requirement for data buffers
     uint64_t memory_dma_alignment() const noexcept {
         return _file_impl->_memory_dma_alignment;
@@ -300,7 +310,7 @@ public:
 
     /// Performs a DMA write from the specified buffer.
     ///
-    /// \param pos offset to write into.  Must be aligned to \ref disk_write_dma_alignment.
+    /// \param pos offset to write into.  Must be aligned to \ref direct_io_alignment.
     /// \param buffer aligned address of buffer to read from.  Buffer must exists
     ///               until the future is made ready.
     /// \param len number of bytes to write.  Must be aligned.
@@ -315,7 +325,7 @@ public:
 
     /// Performs a DMA write to the specified iovec.
     ///
-    /// \param pos offset to write into.  Must be aligned to \ref disk_write_dma_alignment.
+    /// \param pos offset to write into.  Must be aligned to \ref direct_io_alignment.
     /// \param iov vector of address/size pairs to write from.  Addresses must be
     ///            aligned.
     /// \param pc the IO priority class under which to queue this operation

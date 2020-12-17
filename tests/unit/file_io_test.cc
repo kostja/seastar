@@ -552,6 +552,7 @@ SEASTAR_TEST_CASE(test_underlying_file) {
         BOOST_CHECK_EQUAL(f.memory_dma_alignment(), lf.memory_dma_alignment());
         BOOST_CHECK_EQUAL(f.disk_read_dma_alignment(), lf.disk_read_dma_alignment());
         BOOST_CHECK_EQUAL(f.disk_write_dma_alignment(), lf.disk_write_dma_alignment());
+        BOOST_CHECK_EQUAL(f.direct_io_alignment(), lf.direct_io_alignment());
         f.close().get();
     });
 }

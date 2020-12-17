@@ -103,6 +103,7 @@ posix_file_impl::query_dma_alignment() {
         // xfs wants at least the block size for writes
         // FIXME: really read the block size
         _disk_write_dma_alignment = std::max<unsigned>(da.d_miniosz, 4096);
+        _direct_io_alignment = da.d_miniosz;
     }
 }
 
@@ -329,7 +330,7 @@ posix_file_impl::write_dma(uint64_t pos, const void* buffer, size_t len, const i
 
 future<size_t>
 posix_file_impl::write_dma(uint64_t pos, std::vector<iovec> iov, const io_priority_class& io_priority_class) noexcept {
-    auto len = internal::sanitize_iovecs(iov, _disk_write_dma_alignment);
+    auto len = internal::sanitize_iovecs(iov, _direct_io_alignment);
     auto req = internal::io_request::make_writev(_fd, pos, iov);
     return engine().submit_io_write(_io_queue, io_priority_class, len, std::move(req)).finally([iov = std::move(iov)] () {});
 }
@@ -485,7 +486,7 @@ append_challenged_posix_file_impl::append_challenged_posix_file_impl(int fd, ope
     throw_system_error_on(r == -1);
     _committed_size = _logical_size = r;
     _sloppy_size = options.sloppy_size;
-    auto hint = align_up<uint64_t>(options.sloppy_size_hint, _disk_write_dma_alignment);
+    auto hint = align_up<uint64_t>(options.sloppy_size_hint, _direct_io_alignment);
     if (_sloppy_size && _committed_size < hint) {
         auto r = ::ftruncate(_fd, hint);
         // We can ignore errors, since it's just a hint.
@@ -563,7 +564,7 @@ append_challenged_posix_file_impl::optimize_queue() noexcept {
     if (n_appending_writes > _max_size_changing_ops
             || (n_appending_writes && _sloppy_size)) {
         if (_sloppy_size && speculative_size < 2 * _committed_size) {
-            speculative_size = align_up<uint64_t>(2 * _committed_size, _disk_write_dma_alignment);
+            speculative_size = align_up<uint64_t>(2 * _committed_size, _direct_io_alignment);
         }
         // We're all alone, so issuing the ftruncate() in the reactor
         // thread won't block us.
